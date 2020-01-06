@@ -1,0 +1,41 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd"><html>
+<head><meta name="qrichtext" content="1" />
+<style type="text/css">p, li { white-space: pre-wrap; }\n</style>
+</head>
+<body style=" font-family:'MS Shell Dlg 2'; font-size:4em; font-weight:400; font-style:normal;">
+
+<p><h1>Information</h1></p>
+
+<p>
+<b>Steps to use this tool:</b>
+<ol>
+<li>Place all the .txt files you wish to label into a folder</li>
+<li>Select that folder using the load button (first on the toolbar)</li>
+<li>Select a .txt file using the drop down file box</li>
+<li>Press the buttons that appear in red, indicating the resting and hyperaemic periods for study</li>
+<li>Place the markers to identify the dicrotic notches and ends of diastole in both the resting and hyperaemic ensembles</li>
+</ol>
+</p>
+
+<p>
+<b>Calculation basics</b>
+<br />Each measure is broadly given for four stages of the cardiac cycle:
+<ol>
+<li>Whole cycle</li>
+<li>Systole - period between end-diastole and the diastolic notch</li>
+<li>Diastole - period between end-diastole and the diastolic notch</li>
+<li>Wave-free - 25% of way into diastole up until 5ms before end-diastole</li>
+</ol>
+The calculations are performed on <b>beat ensembles</b>, i.e. averaged beats. Beats which are 10% shorter or longer than the median beat's duration are excluded, as they presumably representing gating errors or ectopic beats.
+</p>
+
+<p>
+<b>DPR/DFR vs. diastolic measures</b><br />
+The Diastolic pressure ratio <b>(dPR)</b> does <i><u>not</i></u> use 'true' diastole, but instead a simplified algorithm where diastole is defined as periods below mean arterial pressure with a negative slope. This program uses this algorithm for the DPR/DFR calculation, but <i>not</i> the diastolic parameters (these use the period from the dicrotic notch to end-diastole, selected by the user with the markers).
+</p>
+
+<p>
+<b>Peak versus mean</b><br />
+Most of these calculations are variably quoted in the literature as using peak values in the period of interest, or mean values across the cardiac cycle. For example, <b>CFR</b> can be defined as the ratio of <i>mean</i> hyperaemic flow to <i>mean</i> resting flow, or <i>peak</i> hyperaemic flow to <i>peak</i> resting flow. For this reason, this program provides <b>peak</b> and <b>mean</b> values for relevant measures.
+</p>
+</body></html>

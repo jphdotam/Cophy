@@ -1,0 +1,3 @@
+Horizontal line at 0
+Auto vertical scaling
+Rest/hyp for pressure ratios
