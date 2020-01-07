@@ -142,13 +142,18 @@ def wavefree_measure(labelui, rest_or_hyp, measure, mean_or_peak):
     time = data[0]['time']
     i_wavefree_start = find_nearest(time, time_wavefree_start)
     i_wavefree_end = find_nearest(time, time_wavefree_end)
+
     wavefree_measure = average_beats_from_beat_list(data, measure=measure)[i_wavefree_start: i_wavefree_end]
-    if mean_or_peak == 'mean':
-        return np.mean(wavefree_measure)
-    elif mean_or_peak == 'peak':
-        return max(wavefree_measure)
-    else:
-        raise ValueError(f"mean_or_peak must be mean or peak, not {mean_or_peak}")
+    try:
+        if mean_or_peak == 'mean':
+            return np.mean(wavefree_measure)
+        elif mean_or_peak == 'peak':
+            return max(wavefree_measure)
+        else:
+            raise ValueError(f"mean_or_peak must be mean or peak, not {mean_or_peak}")
+    except ValueError as e:
+        print(f"Error - did you put the sliders the wrong way around? ({e})")
+        return 0
 
 
 def diastolic_measure(labelui, rest_or_hyp, measure, mean_or_peak):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file './ui_label.ui'
+# Form implementation generated from reading ui file '.\ui_label.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
@@ -21,9 +21,14 @@ class Ui_MainWindow(object):
         self.verticalLayout_Centre.setObjectName("verticalLayout_Centre")
         self.comboBox_txtsdyFiles = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox_txtsdyFiles.setEnabled(False)
-        self.comboBox_txtsdyFiles.setObjectName("comboBox_txtFiles")
+        self.comboBox_txtsdyFiles.setObjectName("comboBox_txtsdyFiles")
         self.comboBox_txtsdyFiles.addItem("")
         self.verticalLayout_Centre.addWidget(self.comboBox_txtsdyFiles)
+        self.checkBox_Pa = QtWidgets.QCheckBox(self.centralwidget)
+        self.checkBox_Pa.setEnabled(False)
+        self.checkBox_Pa.setChecked(True)
+        self.checkBox_Pa.setObjectName("checkBox_Pa")
+        self.verticalLayout_Centre.addWidget(self.checkBox_Pa)
         self.graphicsView_ = PlotWidget(self.centralwidget)
         self.graphicsView_.setObjectName("graphicsView_")
         self.verticalLayout_Centre.addWidget(self.graphicsView_)
@@ -132,7 +137,7 @@ class Ui_MainWindow(object):
         self.gridLayout.setColumnStretch(2, 2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1680, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1680, 21))
         self.menubar.setObjectName("menubar")
         self.menuHello = QtWidgets.QMenu(self.menubar)
         self.menuHello.setObjectName("menuHello")
@@ -175,6 +180,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "CoPhyPy"))
         self.comboBox_txtsdyFiles.setCurrentText(_translate("MainWindow", "Please select a file"))
         self.comboBox_txtsdyFiles.setItemText(0, _translate("MainWindow", "Please select a file"))
+        self.checkBox_Pa.setText(_translate("MainWindow", "Use Physiology Channel for Pa (SDY files only)"))
         self.label_StudyData.setText(_translate("MainWindow", "Study Data"))
         self.label_PatientID.setText(_translate("MainWindow", "Patient ID:"))
         self.label_StudyDate.setText(_translate("MainWindow", "Study Date:"))
@@ -183,8 +189,8 @@ class Ui_MainWindow(object):
         self.textBrowser.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'.SF NS Text\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'MS Shell Dlg 2\'; font-size:16pt;\">Information</span></p></body></html>"))
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:16pt;\">Information</span></p></body></html>"))
         self.label_Pressures.setText(_translate("MainWindow", "Pressures"))
         self.label_PressureRatios.setText(_translate("MainWindow", "Pressure Ratios"))
         self.label_Flows.setText(_translate("MainWindow", "Flows"))

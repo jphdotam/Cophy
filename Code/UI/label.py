@@ -12,7 +12,6 @@ from Code.Data import plots
 import Code.Data.calculations as c
 from Code.Data.TxtFile import TxtFile
 from Code.Data.SDYFile import SDYFile
-from _Old.protocols import protocols
 from Code.UI.layout_label import Ui_MainWindow
 
 if QtCore.QT_VERSION >= 0x50501:
@@ -23,9 +22,8 @@ if QtCore.QT_VERSION >= 0x50501:
 
     sys.excepthook = excepthook
 
-PROTOCOL = protocols['combowire']
 SAMPLE_FREQ = 200
-PD_OFFSET_TIME = 0.00
+PD_OFFSET_TIME = 0.05
 PD_OFFSET_POINT = int(PD_OFFSET_TIME * SAMPLE_FREQ)
 
 
@@ -41,10 +39,10 @@ class LabelUI(Ui_MainWindow):
         self.setupUi(mainwindow)
         self.actionLoad_study.triggered.connect(self.load_study_folder)
         self.comboBox_txtsdyFiles.activated.connect(self.load_txtsdyFile)
+        self.checkBox_Pa.clicked.connect(self.toggle_pa)
         self.GraphicsLayout = pg.GraphicsLayout()
         self.graphicsView_.setCentralItem(self.GraphicsLayout)
         self.graphicsView_.show()
-        self.protocol = PROTOCOL
         self.verticalLayout_Buttons.setAlignment(QtCore.Qt.AlignTop)
 
         self.studyFolderPath = None
@@ -67,6 +65,8 @@ class LabelUI(Ui_MainWindow):
 
         self.ensemble_data_rest = None
         self.ensemble_data_hyp = None
+        self.ensemble_times_rest = None
+        self.ensemble_times_hyp = None
 
         self.slider_notch_rest = None
         self.slider_notch_hyp = None
@@ -103,6 +103,10 @@ class LabelUI(Ui_MainWindow):
                                                                           QtWidgets.QFileDialog.ShowDirsOnly)
         self.refresh_ui()
 
+    def toggle_pa(self):
+        self.save_cph()
+        self.load_txtsdyFile()
+
     def load_txtsdyFile(self):
         self.studyFolderPath = None
         self.studyData = dict()
@@ -121,6 +125,8 @@ class LabelUI(Ui_MainWindow):
 
         self.ensemble_data_rest = None
         self.ensemble_data_hyp = None
+        self.ensemble_times_rest = None
+        self.ensemble_times_hyp = None
 
         self.slider_notch_rest = None
         self.slider_notch_hyp = None
@@ -131,8 +137,11 @@ class LabelUI(Ui_MainWindow):
         try:
             if os.path.splitext(study_path)[-1] == ".txt":
                 self.TxtSdyFile = TxtFile(studypath=study_path, pd_offset=PD_OFFSET_POINT)
+                self.checkBox_Pa.setEnabled(False)
             elif os.path.splitext(study_path)[-1] == ".sdy":
-                self.TxtSdyFile = SDYFile(filepath=study_path)
+                pa_channel = 'pa_physio' if self.checkBox_Pa.isChecked() else 'pa_trans'
+                self.TxtSdyFile = SDYFile(filepath=study_path, pa_channel=pa_channel)
+                self.checkBox_Pa.setEnabled(True)
         except FileNotFoundError:
             print(f"!!!UNABLE TO FIND FILE {study_path}!!!")
 
@@ -140,6 +149,14 @@ class LabelUI(Ui_MainWindow):
         self.draw_buttons()
         self.load()
         self.perform_calculations_and_save()
+
+    @staticmethod
+    def clip_wave(wave, n_stds=4):
+        print(type(wave))
+        std = np.nanstd(wave)
+        mean = np.nanmean(wave)
+        wave[wave > mean + (n_stds * std)] = np.nan
+        return wave
 
     def plot_txtsdyFile(self):
         pg.setConfigOptions(antialias=True)
@@ -150,7 +167,9 @@ class LabelUI(Ui_MainWindow):
         self.graphicsView_.setCentralItem(self.GraphicsLayout)
         self.graphicsView_.show()
 
-        # data
+        # Data
+        # data_pa = self.clip_wave(np.array(self.TxtSdyFile.df['pa']))
+        # data_pd = self.clip_wave(np.array(self.TxtSdyFile.df['pd']))
         data_pa = np.array(self.TxtSdyFile.df['pa'])
         data_pd = np.array(self.TxtSdyFile.df['pd'])
         data_time = np.array(self.TxtSdyFile.df['time'])
@@ -162,7 +181,7 @@ class LabelUI(Ui_MainWindow):
         data_stenosis_resistance = plots.stenosis_resistance(self)
         data_stenosis_resistance_filtered = plots.stenosis_resistance(self)
 
-        # plots
+        # Plots
         self.plot_pressure = self.GraphicsLayout.addPlot(row=0, col=0, colspan=2, title='Pressure')
         self.plot_flow = self.GraphicsLayout.addPlot(row=1, col=0, colspan=2, title='Flow')
         self.plot_pressure_ratios = self.GraphicsLayout.addPlot(row=2, col=0, colspan=2,
@@ -176,9 +195,6 @@ class LabelUI(Ui_MainWindow):
             p.setXLink(self.plot_pressure)
 
         # Lines
-        # print(data_pa)
-        # print(data_pa[0])
-        # print(type(data_pa[0]))
         self.plot_pressure.plot(x=data_time, y=data_pa, name='Pa', pen='r')
         self.plot_pressure.plot(x=data_time, y=data_pd, name='Pd', pen='y')
         self.plot_flow.plot(x=data_time, y=data_flow, name='Flow', pen='g')
@@ -605,19 +621,19 @@ class LabelUI(Ui_MainWindow):
             self.calculations['pressures'].append({'name': 'Wavefree Pa',
                                                    'state': 'hyp',
                                                    'phase': 'mean',
-                                                   'value': c.systolic_measure(self, 'hyp', 'pa', 'mean')})
+                                                   'value': c.wavefree_measure(self, 'hyp', 'pa', 'mean')})
             self.calculations['pressures'].append({'name': 'Wavefree Pd',
                                                    'state': 'hyp',
                                                    'phase': 'mean',
-                                                   'value': c.systolic_measure(self, 'hyp', 'pd', 'mean')})
+                                                   'value': c.wavefree_measure(self, 'hyp', 'pd', 'mean')})
             self.calculations['pressures'].append({'name': 'Wavefree Pa',
                                                    'state': 'hyp',
                                                    'phase': 'peak',
-                                                   'value': c.systolic_measure(self, 'hyp', 'pa', 'peak')})
+                                                   'value': c.wavefree_measure(self, 'hyp', 'pa', 'peak')})
             self.calculations['pressures'].append({'name': 'Wavefree Pd',
                                                    'state': 'hyp',
                                                    'phase': 'peak',
-                                                   'value': c.systolic_measure(self, 'hyp', 'pd', 'peak')})
+                                                   'value': c.wavefree_measure(self, 'hyp', 'pd', 'peak')})
 
             ifrh = c.wavefree_measure(self, 'hyp', 'pd', 'mean') / c.wavefree_measure(self, 'hyp', 'pa', 'mean')
             self.calculations['pressure_ratios'].append({'name': 'iFR (hyp.)', 'value': ifrh})
@@ -646,8 +662,11 @@ class LabelUI(Ui_MainWindow):
 
             wf_cfr_mean = c.wavefree_measure(self, 'hyp', 'flow', 'mean') / c.wavefree_measure(self, 'rest', 'flow',
                                                                                                'mean')
-            wf_cfr_peak = c.wavefree_measure(self, 'hyp', 'flow', 'peak') / c.wavefree_measure(self, 'rest', 'flow',
+            try:
+                wf_cfr_peak = c.wavefree_measure(self, 'hyp', 'flow', 'peak') / c.wavefree_measure(self, 'rest', 'flow',
                                                                                                'peak')
+            except ZeroDivisionError:
+                wf_cfr_peak = 0
             self.calculations['flow_ratios'].append({'name': 'Wavefree CFR',
                                                      'phase': 'mean',
                                                      'value': wf_cfr_mean})
@@ -694,24 +713,31 @@ class LabelUI(Ui_MainWindow):
 
     def save_cph(self):
         save_dict = {}
+        save_dict['pa'] = self.checkBox_Pa.isChecked()
         try:
             save_dict['range_rest'] = self.slider_group_rest[0].getRegion()
-        except TypeError: pass
+        except TypeError:
+            pass
         try:
             save_dict['range_hyp'] = self.slider_group_hyp[0].getRegion()
-        except TypeError: pass
+        except TypeError:
+            pass
         try:
             save_dict['notch_rest'] = self.slider_notch_rest.value()
-        except AttributeError: pass
+        except AttributeError:
+            pass
         try:
             save_dict['notch_hyp'] = self.slider_notch_hyp.value()
-        except AttributeError: pass
+        except AttributeError:
+            pass
         try:
             save_dict['enddiastole_rest'] = self.slider_enddiastole_rest.value()
-        except AttributeError: pass
+        except AttributeError:
+            pass
         try:
             save_dict['enddiastole_hyp'] = self.slider_enddiastole_hyp.value()
-        except AttributeError: pass
+        except AttributeError:
+            pass
         with open(f"{self.TxtSdyFile.studypath}.cph", 'wb') as f:
             pickle.dump(save_dict, f)
         print("Saved")
@@ -719,12 +745,20 @@ class LabelUI(Ui_MainWindow):
     def load(self):
         cph_path = f"{self.TxtSdyFile.studypath}.cph"
         saved_cph = self.load_cph(cph_path)
+        pa = saved_cph.get('pa', True)
         range_rest = saved_cph.get('range_rest', None)
         range_hyp = saved_cph.get('range_hyp', None)
         notch_rest = saved_cph.get('notch_rest', None)
         notch_hyp = saved_cph.get('notch_hyp', None)
         enddiastole_rest = saved_cph.get('enddiastole_rest', None)
         enddiastole_hyp = saved_cph.get('enddiastole_hyp', None)
+        self.checkBox_Pa.setChecked(pa)
+        if type(self.TxtSdyFile) == SDYFile:
+            pa_channel = 'pa_physio' if pa else 'pa_trans'
+            if self.TxtSdyFile.pa_channel != pa_channel:
+                self.TxtSdyFile.pa_channel = pa_channel
+                self.TxtSdyFile.parse_data()
+                self.plot_txtsdyFile()
         if range_rest:
             self.create_slider_group_rest(range_from=range_rest[0], range_to=range_rest[1])
             self.button_rest.slider_active = True
@@ -759,7 +793,6 @@ class LabelUI(Ui_MainWindow):
             # Save file not found
             return {}
 
-
     def perform_calculations_and_save(self):
         self.calculate_ensemble_rest()
         self.calculate_ensemble_hyp()
@@ -774,4 +807,4 @@ if __name__ == "__main__":
     ui = LabelUI(MainWindow)
     MainWindow.show()
     print('Showing')
-    sys.exit(app.exec_())
+    app.exec_()
