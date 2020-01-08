@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 import pandas as pd
 
@@ -7,7 +8,11 @@ class TxtFile:
     def __init__(self, studypath, pd_offset=None):
         self.studypath = studypath
         self.pd_offset = pd_offset
-        self.df = self.load_data()
+        self.patient_id = None
+        self.study_date = None
+        self.export_date = None
+        self.df = None
+        self.load_data()
 
     def load_data(self):
         """The heading columns are so variable it's almost unbelievable... And sometimes the RWave and Timestamp columns
@@ -17,6 +22,9 @@ class TxtFile:
         with open(self.studypath) as f:
             """First find the row with the RWave in it; this is our column headings"""
             lines = f.readlines()
+            self.patient_id = re.search("Patient: ([A-Za-z0-9]*),", lines[0]).group(1)
+            self.study_date = re.search("Study date: ([0-9/]*),", lines[0]).group(1)
+            self.export_date = re.search("Export date: ([0-9/]*)", lines[0]).group(1)
             for i_line, line in enumerate(lines):
                 if "RWave" in line:
                     heading_line = line
@@ -47,4 +55,4 @@ class TxtFile:
             # new_flow = np.concatenate((np.array(df.flow[self.pd_offset:]), np.zeros(self.pd_offset)))
             # df.flow = new_flow
 
-        return df
+        self.df = df

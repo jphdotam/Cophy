@@ -5,9 +5,10 @@ import peakutils
 from sklearn.metrics import auc
 from scipy.signal import savgol_filter
 
-from Code.UI.label import SAMPLE_FREQ
+#from Code.UI.label import SAMPLE_FREQ
+SAMPLE_FREQ = 200
 
-def pdpa(labelui):
+def pdpa(labelui, clip_vals=(0, 4)):
     df = labelui.TxtSdyFile.df
     pd = np.array(df['pd'])
     pa = np.array(df['pa'])
@@ -22,6 +23,9 @@ def pdpa(labelui):
         auc_pa = auc(x=beat_time, y=beat_pa)
         auc_pd = auc(x=beat_time, y=beat_pd)
         pdpa = auc_pd / auc_pa
+        if clip_vals:
+            pdpa = max(pdpa, clip_vals[0])
+            pdpa = min(pdpa, clip_vals[1])
         x.append(beat_time[-1])
         y.append(pdpa)
     return {'x': x, 'y': y}
@@ -57,12 +61,6 @@ def microvascular_resistance(labelui, flow_mean_or_peak='peak'):
         y.append(resistance)
     return {'x': x, 'y': y}
 
-def microvascular_resistance_filtered(labelui):
-    results = microvascular_resistance(labelui)
-    x, y = results['x'], results['y']
-    y_filtered = savgol_filter(y, window_length=17, polyorder=3)
-    return {'x': x, 'y': y_filtered}
-
 def stenosis_resistance(labelui, flow_mean_or_peak='peak'):
     df = labelui.TxtSdyFile.df
     pa = np.array(df['pa'])
@@ -92,8 +90,8 @@ def stenosis_resistance(labelui, flow_mean_or_peak='peak'):
         y.append(resistance)
     return {'x': x, 'y': y}
 
-def stenosis_resistance_filtered(labelui):
-    results = microvascular_resistance(labelui)
-    x, y = results['x'], results['y']
+
+def filtered_resistance(resistance):
+    x, y = resistance['x'], resistance['y']
     y_filtered = savgol_filter(y, window_length=17, polyorder=3)
     return {'x': x, 'y': y_filtered}

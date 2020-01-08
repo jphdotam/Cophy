@@ -30,6 +30,7 @@ class SDYFile:
         self.studypath = filepath
         self.pa_channel = pa_channel
         self.filetype, self.datetime, self.examtype, self.demographics = None, None, None, None
+        self.patient_id, self.study_date, self.export_date = None, None, None  # To mimic TxtFile
         self.raw_study_data = None
         self.pd, self.pa, self.ecg, self.flow, self.df = None, None, None, None, None
         self.calc1, self.calc2, self.calc3 = None, None, None
@@ -49,6 +50,9 @@ class SDYFile:
         for demographic_name in DEMOGRAPHICS:
             demographics[demographic_name] = file.read(512).decode('utf-16').replace('\x00', '').strip()
         self.demographics = demographics
+        self.patient_id = demographics['MRN']
+        self.study_date = self.datetime
+        self.export_date = "NA (SDY file)"
 
     def parse_study_data(self, file):
         """Should start in correct place following self.load_study_info()"""

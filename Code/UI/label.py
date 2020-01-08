@@ -53,25 +53,15 @@ class LabelUI(Ui_MainWindow):
         with open("./information.txt", 'r') as f:
             self.textBrowser.setHtml("\n".join(f.readlines()))
 
-        self.plot_pressure = None
-        self.plot_flow = None
-        self.plot_pressure_ratios = None
-        self.plot_resistances = None
-        self.plot_ensemble_rest = None
-        self.plot_ensemble_hyp = None
-
-        self.slider_group_rest = None
-        self.slider_group_hyp = None
-
-        self.ensemble_data_rest = None
-        self.ensemble_data_hyp = None
-        self.ensemble_times_rest = None
-        self.ensemble_times_hyp = None
-
-        self.slider_notch_rest = None
-        self.slider_notch_hyp = None
-        self.slider_enddiastole_rest = None
-        self.slider_enddiastole_hyp = None
+        self.plot_pressure, self.plot_flow, self.plot_pressure_ratios = None, None, None
+        self.plot_resistances, self.plot_ensemble_rest, self.plot_ensemble_hyp = None, None, None
+        self.slider_group_rest, self.slider_group_hyp = None, None
+        self.ensemble_data_rest, self.ensemble_data_hyp = None, None
+        self.button_rest, self.button_hyp = None, None
+        self.button_notch_rest, self.button_enddiastole_rest = None, None
+        self.button_notch_hyp, self.button_enddiastole_hyp = None, None
+        self.slider_notch_rest, self.slider_notch_hyp = None, None
+        self.slider_enddiastole_rest, self.slider_enddiastole_hyp = None, None
 
     def refresh_ui(self):
         if self.studyFolderPath:
@@ -86,9 +76,11 @@ class LabelUI(Ui_MainWindow):
             sdy_file_paths = glob(os.path.join(self.studyFolderPath, "*.sdy"))
             for txt_file_path in txt_file_paths:
                 labels = self.load_cph(f"{txt_file_path}.cph")
+                labels.pop('pa', None)  # Remove the PA key so doesn't count as a label
                 self.comboBox_txtsdyFiles.addItem("{} - {} labels".format(txt_file_path, len(labels)))
             for sdy_file_path in sdy_file_paths:
                 labels = self.load_cph(f"{sdy_file_path}.cph")
+                labels.pop('pa', None)  # Remove the PA key so doesn't count as a label
                 self.comboBox_txtsdyFiles.addItem("{} - {} labels".format(sdy_file_path, len(labels)))
 
             # Clear the plot window
@@ -113,25 +105,12 @@ class LabelUI(Ui_MainWindow):
         self.TxtSdyFile = None
         self.calculations = dict()
 
-        self.plot_pressure = None
-        self.plot_flow = None
-        self.plot_pressure_ratios = None
-        self.plot_resistances = None
-        self.plot_ensemble_rest = None
-        self.plot_ensemble_hyp = None
-
-        self.slider_group_rest = None
-        self.slider_group_hyp = None
-
-        self.ensemble_data_rest = None
-        self.ensemble_data_hyp = None
-        self.ensemble_times_rest = None
-        self.ensemble_times_hyp = None
-
-        self.slider_notch_rest = None
-        self.slider_notch_hyp = None
-        self.slider_enddiastole_rest = None
-        self.slider_enddiastole_hyp = None
+        self.plot_pressure, self.plot_flow, self.plot_pressure_ratios = None, None, None
+        self.plot_resistances, self.plot_ensemble_rest, self.plot_ensemble_hyp = None, None, None
+        self.slider_group_rest, self.slider_group_hyp = None, None
+        self.ensemble_data_rest, self.ensemble_data_hyp = None, None
+        self.slider_notch_rest, self.slider_notch_hyp = None, None
+        self.slider_enddiastole_rest, self.slider_enddiastole_hyp = None, None
 
         study_path = self.comboBox_txtsdyFiles.currentText().rsplit(' ', 3)[0]
         try:
@@ -142,20 +121,24 @@ class LabelUI(Ui_MainWindow):
                 pa_channel = 'pa_physio' if self.checkBox_Pa.isChecked() else 'pa_trans'
                 self.TxtSdyFile = SDYFile(filepath=study_path, pa_channel=pa_channel)
                 self.checkBox_Pa.setEnabled(True)
+            self.label_PatientID.setText(f"Patient ID:\t{self.TxtSdyFile.patient_id}")
+            self.label_StudyDate.setText(f"Study date:\t{self.TxtSdyFile.study_date}")
+            self.label_ExportDate.setText(f"Export date:\t{self.TxtSdyFile.export_date}")
         except FileNotFoundError:
             print(f"!!!UNABLE TO FIND FILE {study_path}!!!")
 
         self.plot_txtsdyFile()
         self.draw_buttons()
-        self.load()
-        self.perform_calculations_and_save()
+        self.load_saved_labels()
+        self.perform_calculations()
 
     @staticmethod
-    def clip_wave(wave, n_stds=4):
-        print(type(wave))
-        std = np.nanstd(wave)
-        mean = np.nanmean(wave)
-        wave[wave > mean + (n_stds * std)] = np.nan
+    def clip_wave(wave, quantile=0.90, n_quantiles=1.5, ref_wave=None):
+        if ref_wave is None:
+            ref_wave = wave
+        quantile = np.nanquantile(ref_wave, quantile)
+        median = np.nanmedian(ref_wave)
+        wave[wave > median + (n_quantiles * quantile)] = np.nan
         return wave
 
     def plot_txtsdyFile(self):
@@ -168,18 +151,17 @@ class LabelUI(Ui_MainWindow):
         self.graphicsView_.show()
 
         # Data
-        # data_pa = self.clip_wave(np.array(self.TxtSdyFile.df['pa']))
-        # data_pd = self.clip_wave(np.array(self.TxtSdyFile.df['pd']))
-        data_pa = np.array(self.TxtSdyFile.df['pa'])
-        data_pd = np.array(self.TxtSdyFile.df['pd'])
+        data_pa = self.clip_wave(np.array(self.TxtSdyFile.df['pa'], dtype=np.float))
+        data_pd = self.clip_wave(np.array(self.TxtSdyFile.df['pd'], dtype=np.float),
+                                 ref_wave=np.array(self.TxtSdyFile.df['pa'], dtype=np.float))
         data_time = np.array(self.TxtSdyFile.df['time'])
         data_flow = np.array(self.TxtSdyFile.df['flow'])
         data_pdpa = plots.pdpa(self)
         data_pdpa_filtered = plots.pdpa_filtered(self)
         data_microvascular_resistance = plots.microvascular_resistance(self)
-        data_microvascular_resistance_filtered = plots.microvascular_resistance_filtered(self)
+        data_microvascular_resistance_filtered = plots.filtered_resistance(data_microvascular_resistance)
         data_stenosis_resistance = plots.stenosis_resistance(self)
-        data_stenosis_resistance_filtered = plots.stenosis_resistance(self)
+        data_stenosis_resistance_filtered = plots.filtered_resistance(data_stenosis_resistance)
 
         # Plots
         self.plot_pressure = self.GraphicsLayout.addPlot(row=0, col=0, colspan=2, title='Pressure')
@@ -219,125 +201,108 @@ class LabelUI(Ui_MainWindow):
                                    name='Stenosis (filtered)',
                                    pen=(255, 0, 255, 200))
 
-    def click_button_rest(self):
-        if self.button_rest.slider_active:
-            self.button_rest.slider_active = False
-            self.button_rest.setStyleSheet(f"background-color: 'red'")
-            self.destroy_slider_group_rest()
-            self.perform_calculations_and_save()
+    def click_button(self, btn):
+        if btn.slider_active:
+            btn.slider_active = False
+            btn.setStyleSheet(f"background-color: 'red'")
         else:
-            self.button_rest.slider_active = True
-            self.button_rest.setStyleSheet(f"background-color: 'green'")
-            self.create_slider_group_rest()
-
-    def click_button_hyp(self):
-        if self.button_hyp.slider_active:
-            self.button_hyp.slider_active = False
-            self.button_hyp.setStyleSheet(f"background-color: 'red'")
-            self.destroy_slider_group_hyp()
-            self.perform_calculations_and_save()
+            btn.slider_active = True
+            btn.setStyleSheet(f"background-color: 'green'")
+        if btn is self.button_rest:
+            self.create_slider_group('rest') if btn.slider_active else self.destroy_slider_group('rest')
+        elif btn is self.button_hyp:
+            self.create_slider_group('hyp') if btn.slider_active else self.destroy_slider_group('hyp')
+        elif btn is self.button_notch_rest:
+            self.create_marker('notch_rest') if btn.slider_active else self.destroy_marker('notch_rest')
+        elif btn is self.button_notch_hyp:
+            self.create_marker('notch_hyp') if btn.slider_active else self.destroy_marker('notch_hyp')
+        elif btn is self.button_enddiastole_rest:
+            self.create_marker('enddiastole_rest') if btn.slider_active else self.destroy_marker('enddiastole_rest')
+        elif btn is self.button_enddiastole_hyp:
+            self.create_marker('enddiastole_hyp') if btn.slider_active else self.destroy_marker('enddiastole_hyp')
         else:
-            self.button_hyp.slider_active = True
-            self.button_hyp.setStyleSheet(f"background-color: 'green'")
-            self.create_slider_group_hyp()
+            print(f"Unknown button clicked!")
 
-    def click_button_marker(self, button, type):
-        if button.slider_active:
-            button.slider_active = False
-            button.setStyleSheet(f"background-color: 'red'")
-            self.destroy_marker_slider(type)
-            self.perform_calculations_and_save()
-        else:
-            button.slider_active = True
-            button.setStyleSheet(f"background-color: 'green'")
-            self.create_marker_slider(type)
+        self.perform_calculations(save=True)  # Save in case something removed; if added OK as not placed yet
 
-    def create_marker_slider(self, type, value=None):
+    def create_marker(self, marker_type, value=None):
         slider = pg.InfiniteLine(pos=0.2, movable=True, label='',
                                  labelOpts={'position': 0.5, 'rotateAxis': (1, 0), 'anchor': (1, 1)})
-        slider.sigPositionChangeFinished.connect(lambda: self.perform_calculations_and_save())
-        if type == 'notch_rest':
+        slider.sigPositionChangeFinished.connect(lambda: self.perform_calculations(save=True))
+        if value:
+            slider.setValue(value)
+        if marker_type == 'notch_rest':
             slider.label = pg.InfLineLabel(slider, text="Dicrotic notch")
-            if value:
-                slider.setValue(value)
             self.plot_ensemble_rest.addItem(slider)
             self.slider_notch_rest = slider
-        elif type == 'notch_hyp':
+        elif marker_type == 'notch_hyp':
             slider.label = pg.InfLineLabel(slider, text="Dicrotic notch")
-            if value:
-                slider.setValue(value)
             self.plot_ensemble_hyp.addItem(slider)
             self.slider_notch_hyp = slider
-        elif type == 'enddiastole_rest':
+        elif marker_type == 'enddiastole_rest':
             slider.label = pg.InfLineLabel(slider, text="End diastole")
-            if value:
-                slider.setValue(value)
             self.plot_ensemble_rest.addItem(slider)
             self.slider_enddiastole_rest = slider
-        elif type == 'enddiastole_hyp':
+        elif marker_type == 'enddiastole_hyp':
             slider.label = pg.InfLineLabel(slider, text="End diastole")
-            if value:
-                slider.setValue(value)
             self.plot_ensemble_hyp.addItem(slider)
             self.slider_enddiastole_hyp = slider
         else:
-            raise ValueError(f"Unknown button type pressed: {type}")
+            raise ValueError(f"Unknown button type pressed: {marker_type}")
 
-    def destroy_marker_slider(self, type):
-        if type == 'notch_rest':
+    def destroy_marker(self, marker_type):
+        if marker_type == 'notch_rest':
             self.plot_ensemble_rest.removeItem(self.slider_notch_rest)
             self.slider_notch_rest = None
-        elif type == 'notch_hyp':
+        elif marker_type == 'notch_hyp':
             self.plot_ensemble_hyp.removeItem(self.slider_notch_hyp)
             self.slider_notch_hyp = None
-        elif type == 'enddiastole_rest':
+        elif marker_type == 'enddiastole_rest':
             self.plot_ensemble_rest.removeItem(self.slider_enddiastole_rest)
             self.slider_enddiastole_rest = None
-        elif type == 'enddiastole_hyp':
+        elif marker_type == 'enddiastole_hyp':
             self.plot_ensemble_hyp.removeItem(self.slider_enddiastole_hyp)
             self.slider_enddiastole_hyp = None
         else:
-            raise ValueError(f"Unknown button type pressed: {type}")
+            raise ValueError(f"Unknown button type pressed: {marker_type}")
 
-    def create_slider_group_rest(self, range_from=None, range_to=None):
+    def create_slider_group(self, rest_or_hyp, range_from=None, range_to=None):
         if range_from is None or range_to is None:
             x_lower, x_upper = self.plot_pressure.getAxis('bottom').range
             range_from = ((x_upper - x_lower) * 0.20) + x_lower
             range_to = ((x_upper - x_lower) * 0.25) + x_lower
-        self.slider_group_rest = []
-        for p in (self.plot_pressure, self.plot_flow, self.plot_pressure_ratios, self.plot_resistances):
-            slider = LabelledLinearRegionItem(values=(range_from, range_to), movable=True, label='Rest')
-            slider.sigRegionChangeFinished.connect(
-                lambda s=slider, group='rest': self.adjust_all_sliders_in_group(s, group))
-            p.addItem(slider, ignoreBounds=True)
-            self.slider_group_rest.append(slider)
+        if rest_or_hyp == 'rest':
+            self.slider_group_rest = []
+            for p in (self.plot_pressure, self.plot_flow, self.plot_pressure_ratios, self.plot_resistances):
+                slider = LabelledLinearRegionItem(values=(range_from, range_to), movable=True, label='Rest')
+                slider.sigRegionChangeFinished.connect(
+                    lambda s=slider, group='rest': self.adjust_all_sliders_in_group(s, group))
+                p.addItem(slider, ignoreBounds=True)
+                self.slider_group_rest.append(slider)
+        elif rest_or_hyp == 'hyp':
+            self.slider_group_hyp = []
+            for p in (self.plot_pressure, self.plot_flow, self.plot_pressure_ratios, self.plot_resistances):
+                slider = LabelledLinearRegionItem(values=(range_from, range_to), movable=True, label='Hyperaemia')
+                slider.sigRegionChangeFinished.connect(
+                    lambda s=slider, group='hyp': self.adjust_all_sliders_in_group(s, group))
+                p.addItem(slider, ignoreBounds=True)
+                self.slider_group_hyp.append(slider)
 
-    def destroy_slider_group_rest(self, ):
+    def destroy_slider_group(self, rest_or_hyp):
+        if rest_or_hyp == 'rest':
+            slider_group = self.slider_group_rest
+        elif rest_or_hyp == 'hyp':
+            slider_group = self.slider_group_hyp
+        else:
+            raise ValueError(f"Unknown value for rest_or_hyp: {rest_or_hyp}")
         for p in (self.plot_pressure, self.plot_flow, self.plot_pressure_ratios, self.plot_resistances):
-            for slider in self.slider_group_rest:  # Try to remove each slider from plot, as a list
+            for slider in slider_group:  # Try to remove each slider from plot, as a list
                 p.removeItem(slider)
-        self.slider_group_rest = []
-        self.perform_calculations_and_save()
-
-    def create_slider_group_hyp(self, range_from=None, range_to=None):
-        if range_from is None or range_to is None:
-            x_lower, x_upper = self.plot_pressure.getAxis('bottom').range
-            range_from = ((x_upper - x_lower) * 0.80) + x_lower
-            range_to = ((x_upper - x_lower) * 0.85) + x_lower
-        self.slider_group_hyp = []
-        for p in (self.plot_pressure, self.plot_flow, self.plot_pressure_ratios, self.plot_resistances):
-            slider = LabelledLinearRegionItem(values=(range_from, range_to), movable=True, label='Hyperaemia')
-            slider.sigRegionChangeFinished.connect(
-                lambda s=slider, group='hyp': self.adjust_all_sliders_in_group(s, group))
-            p.addItem(slider, ignoreBounds=True)
-            self.slider_group_hyp.append(slider)
-
-    def destroy_slider_group_hyp(self, ):
-        for p in (self.plot_pressure, self.plot_flow, self.plot_pressure_ratios, self.plot_resistances):
-            for slider in self.slider_group_hyp:  # Try to remove each slider from plot, as a list
-                p.removeItem(slider)
-        self.slider_group_hyp = []
-        self.perform_calculations_and_save()
+        if rest_or_hyp == 'rest':
+            self.slider_group_rest = []
+        elif rest_or_hyp == 'hyp':
+            self.slider_group_hyp = []
+        self.perform_calculations()
 
     def draw_buttons(self):
         def clear_layout(layout):
@@ -347,59 +312,23 @@ class LabelUI(Ui_MainWindow):
                 except AttributeError:
                     pass
 
+        def initialise_button(labelui, text):
+            btn = QtWidgets.QPushButton(labelui.centralwidget)
+            btn.setText(text)
+            btn.slider_active = False
+            btn.clicked.connect(lambda state, button=btn: labelui.click_button(button))
+            btn.setStyleSheet(f"background-color: 'red'")
+            self.verticalLayout_Buttons.addWidget(btn)
+            return btn
+
         clear_layout(self.verticalLayout_Buttons)
 
-        self.button_rest = QtWidgets.QPushButton(self.centralwidget)
-        self.button_rest.setText('Rest')
-        self.button_rest.slider_active = False
-        self.button_rest.clicked.connect(lambda state: self.click_button_rest())
-        self.button_rest.setStyleSheet(f"background-color: 'red'")
-        self.verticalLayout_Buttons.addWidget(self.button_rest)
-
-        self.button_hyp = QtWidgets.QPushButton(self.centralwidget)
-        self.button_hyp.setText('Hyperaemia')
-        self.button_hyp.slider_active = False
-        self.button_hyp.clicked.connect(lambda state, button=self.button_hyp: self.click_button_hyp())
-        self.button_hyp.setStyleSheet(f"background-color: 'red'")
-        self.verticalLayout_Buttons.addWidget(self.button_hyp)
-
-        self.button_notch_rest = QtWidgets.QPushButton(self.centralwidget)
-        self.button_notch_rest.setText('Dicrotic notch (rest)')
-        self.button_notch_rest.slider_active = False
-        self.button_notch_rest.clicked.connect(lambda state,
-                                                      button=self.button_notch_rest,
-                                                      type='notch_rest': self.click_button_marker(button, type))
-        self.button_notch_rest.setStyleSheet(f"background-color: 'red'")
-        self.verticalLayout_Buttons.addWidget(self.button_notch_rest)
-
-        self.button_enddiastole_rest = QtWidgets.QPushButton(self.centralwidget)
-        self.button_enddiastole_rest.setText('End diastole (rest)')
-        self.button_enddiastole_rest.slider_active = False
-        self.button_enddiastole_rest.clicked.connect(lambda state,
-                                                            button=self.button_enddiastole_rest,
-                                                            type='enddiastole_rest': self.click_button_marker(button,
-                                                                                                              type))
-        self.button_enddiastole_rest.setStyleSheet(f"background-color: 'red'")
-        self.verticalLayout_Buttons.addWidget(self.button_enddiastole_rest)
-
-        self.button_notch_hyp = QtWidgets.QPushButton(self.centralwidget)
-        self.button_notch_hyp.setText('Dicrotic notch (hyperaemia)')
-        self.button_notch_hyp.slider_active = False
-        self.button_notch_hyp.clicked.connect(lambda state,
-                                                     button=self.button_notch_hyp,
-                                                     type='notch_hyp': self.click_button_marker(button, type))
-        self.button_notch_hyp.setStyleSheet(f"background-color: 'red'")
-        self.verticalLayout_Buttons.addWidget(self.button_notch_hyp)
-
-        self.button_enddiastole_hyp = QtWidgets.QPushButton(self.centralwidget)
-        self.button_enddiastole_hyp.setText('End diastole (hyperaemia)')
-        self.button_enddiastole_hyp.slider_active = False
-        self.button_enddiastole_hyp.clicked.connect(lambda state,
-                                                           button=self.button_enddiastole_hyp,
-                                                           type='enddiastole_hyp': self.click_button_marker(button,
-                                                                                                            type))
-        self.button_enddiastole_hyp.setStyleSheet(f"background-color: 'red'")
-        self.verticalLayout_Buttons.addWidget(self.button_enddiastole_hyp)
+        self.button_rest = initialise_button(self, 'Rest')
+        self.button_hyp = initialise_button(self, 'Hyperaemia')
+        self.button_notch_rest = initialise_button(self, 'Dicrotic notch (rest)')
+        self.button_enddiastole_rest = initialise_button(self, 'End diastole (rest)')
+        self.button_notch_hyp = initialise_button(self, 'Dicrotic notch (hyperaemia)')
+        self.button_enddiastole_hyp = initialise_button(self, 'End diastole (hyperaemia)')
 
     def adjust_all_sliders_in_group(self, slider, slider_group):
         slider_min, slider_max = slider.getRegion()
@@ -409,43 +338,38 @@ class LabelUI(Ui_MainWindow):
             slider_group = self.slider_group_hyp
         else:
             raise ValueError(f"Unknown slider group")
-        for slider in slider_group:
-            slider.setRegion((slider_min, slider_max))
-        self.perform_calculations_and_save()
+        for s in slider_group:
+            if s.getRegion() != (slider_min, slider_max):  # Only move if needed
+                s.setRegion((slider_min, slider_max))
+        self.perform_calculations(save=True)
 
-    def calculate_ensemble_rest(self):
-        self.plot_ensemble_rest.clear()
-        self.ensemble_data_rest, n_rejected = c.ensemble_beats(self, 'rest')
-        if self.ensemble_data_rest:
-            t0 = self.ensemble_data_rest[0]['time']
-            for beat in self.ensemble_data_rest:
-                self.plot_ensemble_rest.plot(x=t0, y=beat['pa'], pen=(192, 192, 192, 100))
-            mean_pa = c.average_beats_from_beat_list(self.ensemble_data_rest, measure='pa')
-            self.plot_ensemble_rest.plot(x=t0, y=mean_pa, pen='g', width=100)
-        self.plot_ensemble_rest.setTitle(
-            f"Resting Ensemble ({len(self.ensemble_data_rest)} beats; {n_rejected} rejected)")
-        if self.slider_notch_rest:
-            self.plot_ensemble_rest.addItem(self.slider_notch_rest)
-        if self.slider_enddiastole_rest:
-            self.plot_ensemble_rest.addItem(self.slider_enddiastole_rest)
+    def calculate_ensemble(self, rest_or_hyp):
+        if rest_or_hyp == 'rest':
+            plot = self.plot_ensemble_rest
+            slider_notch = self.slider_notch_rest
+            slider_enddiastole = self.slider_enddiastole_rest
+        elif rest_or_hyp == 'hyp':
+            plot = self.plot_ensemble_hyp
+            slider_notch = self.slider_notch_hyp
+            slider_enddiastole = self.slider_enddiastole_hyp
+        else:
+            raise ValueError(f"Unknown rest_or_hyp value {rest_or_hyp}")
+        ensemble_data, n_rejected = c.ensemble_beats(self, rest_or_hyp)
+        plot.clear()
+        if ensemble_data:
+            t0 = ensemble_data[0]['time']
+            for beat in ensemble_data:
+                plot.plot(x=t0, y=beat['pa'], pen=(192, 192, 192, 100))
+            mean_pa = c.average_beats_from_beat_list(ensemble_data, measure='pa')
+            plot.plot(x=t0, y=mean_pa, pen='g', width=100)
+        plot.setTitle(f"Resting Ensemble ({len(ensemble_data)} beats; {n_rejected} rejected)")
+        if slider_notch:
+            plot.addItem(slider_notch)
+        if slider_enddiastole:
+            plot.addItem(slider_enddiastole)
+        return ensemble_data
 
-    def calculate_ensemble_hyp(self):
-        self.plot_ensemble_hyp.clear()
-        self.ensemble_data_hyp, n_rejected = c.ensemble_beats(self, 'hyp')
-        if self.ensemble_data_hyp:
-            t0 = self.ensemble_data_hyp[0]['time']
-            for beat in self.ensemble_data_hyp:
-                self.plot_ensemble_hyp.plot(x=t0, y=beat['pa'], pen=(192, 192, 192, 100))
-            mean_pa = c.average_beats_from_beat_list(self.ensemble_data_hyp, measure='pa')
-            self.plot_ensemble_hyp.plot(x=t0, y=mean_pa, pen='g', width=100)
-        self.plot_ensemble_hyp.setTitle(
-            f"Hyperaemic Ensemble ({len(self.ensemble_data_hyp)} beats; {n_rejected} rejected)")
-        if self.slider_notch_hyp:
-            self.plot_ensemble_hyp.addItem(self.slider_notch_hyp)
-        if self.slider_enddiastole_hyp:
-            self.plot_ensemble_hyp.addItem(self.slider_enddiastole_hyp)
-
-    def perform_calculations(self):
+    def calculate(self):
         self.calculations['pressures'] = []
         self.calculations['pressure_ratios'] = []
         self.calculations['flows'] = []
@@ -571,7 +495,7 @@ class LabelUI(Ui_MainWindow):
                                                      'phase': 'peak',
                                                      'value': cfr_peak})
 
-        if self.slider_notch_rest and self.slider_enddiastole_rest:
+        if self.slider_group_rest and self.slider_notch_rest and self.slider_enddiastole_rest:
             self.calculations['pressures'].append({'name': 'Sysolic Pa',
                                                    'state': 'rest',
                                                    'phase': 'mean',
@@ -609,7 +533,7 @@ class LabelUI(Ui_MainWindow):
                                                'phase': 'peak',
                                                'value': c.wavefree_measure(self, 'rest', 'flow', 'peak')})
 
-        if self.slider_notch_hyp and self.slider_enddiastole_hyp:
+        if self.slider_group_hyp and self.slider_notch_hyp and self.slider_enddiastole_hyp:
             self.calculations['pressures'].append({'name': 'Sysolic Pa',
                                                    'state': 'hyp',
                                                    'phase': 'mean',
@@ -647,7 +571,7 @@ class LabelUI(Ui_MainWindow):
                                                'phase': 'peak',
                                                'value': c.wavefree_measure(self, 'hyp', 'flow', 'peak')})
 
-        if self.slider_notch_rest and self.slider_notch_hyp and \
+        if self.slider_group_rest and self.slider_group_hyp and self.slider_notch_rest and self.slider_notch_hyp and \
                 self.slider_enddiastole_rest and self.slider_enddiastole_hyp:
             sys_cfr_mean = c.systolic_measure(self, 'hyp', 'flow', 'mean') / c.systolic_measure(self, 'rest', 'flow',
                                                                                                 'mean')
@@ -664,7 +588,7 @@ class LabelUI(Ui_MainWindow):
                                                                                                'mean')
             try:
                 wf_cfr_peak = c.wavefree_measure(self, 'hyp', 'flow', 'peak') / c.wavefree_measure(self, 'rest', 'flow',
-                                                                                               'peak')
+                                                                                                   'peak')
             except ZeroDivisionError:
                 wf_cfr_peak = 0
             self.calculations['flow_ratios'].append({'name': 'Wavefree CFR',
@@ -716,11 +640,11 @@ class LabelUI(Ui_MainWindow):
         save_dict['pa'] = self.checkBox_Pa.isChecked()
         try:
             save_dict['range_rest'] = self.slider_group_rest[0].getRegion()
-        except TypeError:
+        except (TypeError, IndexError):
             pass
         try:
             save_dict['range_hyp'] = self.slider_group_hyp[0].getRegion()
-        except TypeError:
+        except (TypeError, IndexError):
             pass
         try:
             save_dict['notch_rest'] = self.slider_notch_rest.value()
@@ -742,7 +666,7 @@ class LabelUI(Ui_MainWindow):
             pickle.dump(save_dict, f)
         print("Saved")
 
-    def load(self):
+    def load_saved_labels(self):
         cph_path = f"{self.TxtSdyFile.studypath}.cph"
         saved_cph = self.load_cph(cph_path)
         pa = saved_cph.get('pa', True)
@@ -760,27 +684,27 @@ class LabelUI(Ui_MainWindow):
                 self.TxtSdyFile.parse_data()
                 self.plot_txtsdyFile()
         if range_rest:
-            self.create_slider_group_rest(range_from=range_rest[0], range_to=range_rest[1])
+            self.create_slider_group(rest_or_hyp='rest', range_from=range_rest[0], range_to=range_rest[1])
             self.button_rest.slider_active = True
             self.button_rest.setStyleSheet(f"background-color: 'green'")
         if range_hyp:
-            self.create_slider_group_hyp(range_from=range_hyp[0], range_to=range_hyp[1])
+            self.create_slider_group(rest_or_hyp='hyp', range_from=range_hyp[0], range_to=range_hyp[1])
             self.button_hyp.slider_active = True
             self.button_hyp.setStyleSheet(f"background-color: 'green'")
         if notch_rest:
-            self.create_marker_slider(type='notch_rest', value=notch_rest)
+            self.create_marker(marker_type='notch_rest', value=notch_rest)
             self.button_notch_rest.slider_active = True
             self.button_notch_rest.setStyleSheet(f"background-color: 'green'")
         if notch_hyp:
-            self.create_marker_slider(type='notch_hyp', value=notch_hyp)
+            self.create_marker(marker_type='notch_hyp', value=notch_hyp)
             self.button_notch_hyp.slider_active = True
             self.button_notch_hyp.setStyleSheet(f"background-color: 'green'")
         if enddiastole_rest:
-            self.create_marker_slider(type='enddiastole_rest', value=enddiastole_rest)
+            self.create_marker(marker_type='enddiastole_rest', value=enddiastole_rest)
             self.button_enddiastole_rest.slider_active = True
             self.button_enddiastole_rest.setStyleSheet(f"background-color: 'green'")
         if enddiastole_hyp:
-            self.create_marker_slider(type='enddiastole_hyp', value=enddiastole_hyp)
+            self.create_marker(marker_type='enddiastole_hyp', value=enddiastole_hyp)
             self.button_enddiastole_hyp.slider_active = True
             self.button_enddiastole_hyp.setStyleSheet(f"background-color: 'green'")
 
@@ -793,12 +717,13 @@ class LabelUI(Ui_MainWindow):
             # Save file not found
             return {}
 
-    def perform_calculations_and_save(self):
-        self.calculate_ensemble_rest()
-        self.calculate_ensemble_hyp()
-        self.perform_calculations()
+    def perform_calculations(self, save=False):
+        self.ensemble_data_rest = self.calculate_ensemble(rest_or_hyp='rest')
+        self.ensemble_data_hyp = self.calculate_ensemble(rest_or_hyp='hyp')
+        self.calculate()
         self.display_calculations()
-        self.save_cph()
+        if save:
+            self.save_cph()
 
 
 if __name__ == "__main__":

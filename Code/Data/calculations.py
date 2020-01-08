@@ -26,7 +26,7 @@ def average_beats_from_beat_list(beat_list, measure):
     return np.mean(selected_beats, axis=0)
 
 
-def ensemble_beats(labelui, rest_or_hyp):
+def ensemble_beats(labelui, rest_or_hyp, max_beats=10):
     try:
         if rest_or_hyp == 'rest':
             time_from, time_to = labelui.slider_group_rest[0].getRegion()  # Can get any slider in the group
@@ -34,7 +34,7 @@ def ensemble_beats(labelui, rest_or_hyp):
             time_from, time_to = labelui.slider_group_hyp[0].getRegion()
         else:
             raise ValueError(f"rest_or_hyp must be 'rest' or 'hyp', not {rest_or_hyp}")
-    except TypeError as e:  # Slider doesn't yet exist
+    except (TypeError, IndexError) as e:  # Slider doesn't yet exist
         return [], 0
 
     pa = np.array(labelui.TxtSdyFile.df['pa'])
@@ -59,6 +59,9 @@ def ensemble_beats(labelui, rest_or_hyp):
     beats = []
     n_rejected = 0
     for i_peak in range(len(peaks) - 1):
+        if len(beats) >= max_beats:
+            print(f"WARNING: Found > {max_beats} beats for {rest_or_hyp} ensemble - skipping remaining beats!")
+            break
         if THRESHOLD[0] * median_rr < peaks[i_peak + 1] - peaks[i_peak] < THRESHOLD[1] * median_rr:
             beat_time = time[peaks[i_peak]:peaks[i_peak + 1]] - time[peaks[i_peak]]  # Substract t0
             beat_pa = pa[peaks[i_peak]:peaks[i_peak + 1]]
@@ -69,7 +72,7 @@ def ensemble_beats(labelui, rest_or_hyp):
                           'pd': interpolate_beat(beat_pd, median_rr),
                           'flow': interpolate_beat(beat_flow, median_rr)})
         else:
-            print(f"Filtering beat > 10% from median")
+            # print(f"Filtering beat > 10% from median")
             n_rejected += 1
     return beats, n_rejected
 
