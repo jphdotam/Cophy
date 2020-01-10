@@ -17,7 +17,7 @@
    <string>CoPhyPy</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout" columnstretch="1,4,2">
+   <layout class="QGridLayout" name="gridLayout" columnstretch="2,8,2">
     <item row="0" column="1">
      <layout class="QVBoxLayout" name="verticalLayout_Centre">
       <item>
@@ -127,6 +127,9 @@ p, li { white-space: pre-wrap; }
     </item>
     <item row="0" column="2">
      <layout class="QVBoxLayout" name="verticalLayout_Results">
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_Pressures">
         <item>
@@ -140,7 +143,14 @@ p, li { white-space: pre-wrap; }
          </widget>
         </item>
         <item>
-         <widget class="QTableWidget" name="tableWidget_Pressures"/>
+         <widget class="QTableWidget" name="tableWidget_Pressures">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -157,7 +167,14 @@ p, li { white-space: pre-wrap; }
          </widget>
         </item>
         <item>
-         <widget class="QTableWidget" name="tableWidget_PressureRatios"/>
+         <widget class="QTableWidget" name="tableWidget_PressureRatios">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -174,7 +191,14 @@ p, li { white-space: pre-wrap; }
          </widget>
         </item>
         <item>
-         <widget class="QTableWidget" name="tableWidget_Flows"/>
+         <widget class="QTableWidget" name="tableWidget_Flows">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -191,7 +215,14 @@ p, li { white-space: pre-wrap; }
          </widget>
         </item>
         <item>
-         <widget class="QTableWidget" name="tableWidget_FlowRatios"/>
+         <widget class="QTableWidget" name="tableWidget_FlowRatios">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -208,39 +239,46 @@ p, li { white-space: pre-wrap; }
          </widget>
         </item>
         <item>
-         <widget class="QTableWidget" name="tableWidget_Resistances"/>
+         <widget class="QTableWidget" name="tableWidget_Resistances">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_Export">
+        <item>
+         <widget class="QPushButton" name="pushButton_ExportStudy">
+          <property name="styleSheet">
+           <string notr="true">background-color: 'green'</string>
+          </property>
+          <property name="text">
+           <string>Export
+Study</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_ExportAll">
+          <property name="styleSheet">
+           <string notr="true">background-color: 'red'</string>
+          </property>
+          <property name="text">
+           <string>Export ALL
+Studies in Folder</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
      </layout>
     </item>
    </layout>
-  </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1680</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuHello">
-    <property name="title">
-     <string>File</string>
-    </property>
-    <addaction name="actionLoad_study"/>
-    <addaction name="separator"/>
-    <addaction name="actionExit"/>
-   </widget>
-   <widget class="QMenu" name="menuHelp">
-    <property name="title">
-     <string>Help</string>
-    </property>
-    <addaction name="actionAbout"/>
-   </widget>
-   <addaction name="menuHello"/>
-   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">

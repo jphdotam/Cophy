@@ -3,6 +3,7 @@ import sys
 import pickle
 import traceback
 import numpy as np
+import pandas as pd
 import pyqtgraph as pg
 from glob import glob
 
@@ -44,6 +45,8 @@ class LabelUI(Ui_MainWindow):
         self.graphicsView_.setCentralItem(self.GraphicsLayout)
         self.graphicsView_.show()
         self.verticalLayout_Buttons.setAlignment(QtCore.Qt.AlignTop)
+        self.pushButton_ExportStudy.clicked.connect(self.export_study)
+        self.pushButton_ExportAll.clicked.connect(self.export_all)
 
         self.studyFolderPath = None
         self.studyData = dict()
@@ -376,36 +379,36 @@ class LabelUI(Ui_MainWindow):
         self.calculations['flow_ratios'] = []
         self.calculations['resistances'] = []
         if self.ensemble_data_rest:
-            self.calculations['pressures'].append({'name': 'Pa',
+            self.calculations['pressures'].append({'name': 'WC Pa',
                                                    'state': 'rest',
                                                    'phase': 'mean',
                                                    'value': c.wholecycle_measure(self, 'rest', 'pa', 'mean')})
-            self.calculations['pressures'].append({'name': 'Pd',
+            self.calculations['pressures'].append({'name': 'WC Pd',
                                                    'state': 'rest',
                                                    'phase': 'mean',
                                                    'value': c.wholecycle_measure(self, 'rest', 'pd', 'mean')})
-            self.calculations['pressures'].append({'name': 'Pa',
+            self.calculations['pressures'].append({'name': 'WC Pa',
                                                    'state': 'rest',
                                                    'phase': 'peak',
                                                    'value': c.wholecycle_measure(self, 'rest', 'pa', 'peak')})
-            self.calculations['pressures'].append({'name': 'Pd',
+            self.calculations['pressures'].append({'name': 'WC Pd',
                                                    'state': 'rest',
                                                    'phase': 'peak',
                                                    'value': c.wholecycle_measure(self, 'rest', 'pd', 'peak')})
 
             pdpa = c.wholecycle_measure(self, 'rest', 'pd', 'mean') / c.wholecycle_measure(self, 'rest', 'pa', 'mean')
-            self.calculations['pressure_ratios'].append({'name': 'PdPa', 'value': pdpa})
+            self.calculations['pressure_ratios'].append({'name': 'WC PdPa', 'value': pdpa})
 
             dfr = c.dpr_measure(self, 'rest', 'pd', 'mean') / c.dpr_measure(self, 'rest', 'pa', 'mean')
             self.calculations['pressure_ratios'].append({'name': 'dPR', 'value': dfr})
 
             self.calculations['pressure_ratios'].append({'name': 'RFR', 'value': c.rfr(self)})
 
-            self.calculations['flows'].append({'name': 'Flow',
+            self.calculations['flows'].append({'name': 'WC Flow',
                                                'state': 'rest',
                                                'phase': 'mean',
                                                'value': c.wholecycle_measure(self, 'rest', 'flow', 'mean')})
-            self.calculations['flows'].append({'name': 'Flow',
+            self.calculations['flows'].append({'name': 'WC Flow',
                                                'state': 'rest',
                                                'phase': 'peak',
                                                'value': c.wholecycle_measure(self, 'rest', 'flow', 'peak')})
@@ -433,19 +436,19 @@ class LabelUI(Ui_MainWindow):
                                                      'value': bmr_peak})
 
         if self.ensemble_data_hyp:
-            self.calculations['pressures'].append({'name': 'Pa',
+            self.calculations['pressures'].append({'name': 'WC Pa',
                                                    'state': 'hyp',
                                                    'phase': 'mean',
                                                    'value': c.wholecycle_measure(self, 'hyp', 'pa', 'mean')})
-            self.calculations['pressures'].append({'name': 'Pd',
+            self.calculations['pressures'].append({'name': 'WC Pd',
                                                    'state': 'hyp',
                                                    'phase': 'mean',
                                                    'value': c.wholecycle_measure(self, 'hyp', 'pd', 'mean')})
-            self.calculations['pressures'].append({'name': 'Pa',
+            self.calculations['pressures'].append({'name': 'WC Pa',
                                                    'state': 'hyp',
                                                    'phase': 'peak',
                                                    'value': c.wholecycle_measure(self, 'hyp', 'pa', 'peak')})
-            self.calculations['pressures'].append({'name': 'Pd',
+            self.calculations['pressures'].append({'name': 'WC Pd',
                                                    'state': 'hyp',
                                                    'phase': 'peak',
                                                    'value': c.wholecycle_measure(self, 'hyp', 'pd', 'peak')})
@@ -453,11 +456,11 @@ class LabelUI(Ui_MainWindow):
             ffr = c.wholecycle_measure(self, 'hyp', 'pd', 'mean') / c.wholecycle_measure(self, 'hyp', 'pa', 'mean')
             self.calculations['pressure_ratios'].append({'name': 'FFR', 'value': ffr})
 
-            self.calculations['flows'].append({'name': 'Flow',
+            self.calculations['flows'].append({'name': 'WC Flow',
                                                'state': 'hyp',
                                                'phase': 'mean',
                                                'value': c.wholecycle_measure(self, 'hyp', 'flow', 'mean')})
-            self.calculations['flows'].append({'name': 'Flow',
+            self.calculations['flows'].append({'name': 'WC Flow',
                                                'state': 'hyp',
                                                'phase': 'peak',
                                                'value': c.wholecycle_measure(self, 'hyp', 'flow', 'peak')})
@@ -560,7 +563,7 @@ class LabelUI(Ui_MainWindow):
                                                    'value': c.wavefree_measure(self, 'hyp', 'pd', 'peak')})
 
             ifrh = c.wavefree_measure(self, 'hyp', 'pd', 'mean') / c.wavefree_measure(self, 'hyp', 'pa', 'mean')
-            self.calculations['pressure_ratios'].append({'name': 'iFR (hyp.)', 'value': ifrh})
+            self.calculations['pressure_ratios'].append({'name': 'iFRa', 'value': ifrh})
 
             self.calculations['flows'].append({'name': 'Wavefree flow',
                                                'state': 'hyp',
@@ -604,6 +607,8 @@ class LabelUI(Ui_MainWindow):
         for table, calcs in zip(tables, calc_dicts):
             table.setRowCount(len(calcs))
             table.setColumnCount(4)
+            for i in range(table.columnCount()):
+                table.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
             table.setHorizontalHeaderLabels(("Parameter", "State", "Phase", "Value"))
             for i_calc, calc_dict in enumerate(calcs):
                 try:
@@ -619,6 +624,8 @@ class LabelUI(Ui_MainWindow):
         for table, calcs in zip(tables, calc_dicts):
             table.setRowCount(len(calcs))
             table.setColumnCount(3)
+            for i in range(table.columnCount()):
+                table.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
             table.setHorizontalHeaderLabels(("Parameter", "Phase", "Value"))
             for i_calc, calc_dict in enumerate(calcs):
                 table.setItem(i_calc, 0, QtWidgets.QTableWidgetItem(str(calc_dict['name'])))
@@ -630,6 +637,8 @@ class LabelUI(Ui_MainWindow):
         for table, calcs in zip(tables, calc_dicts):
             table.setRowCount(len(calcs))
             table.setColumnCount(2)
+            for i in range(table.columnCount()):
+                table.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
             table.setHorizontalHeaderLabels(("Parameter", "Value"))
             for i_calc, calc_dict in enumerate(calcs):
                 table.setItem(i_calc, 0, QtWidgets.QTableWidgetItem(str(calc_dict['name'])))
@@ -724,6 +733,23 @@ class LabelUI(Ui_MainWindow):
         self.display_calculations()
         if save:
             self.save_cph()
+
+    def export_study(self):
+        study_dict = {}
+        for table in [self.tableWidget_Pressures, self.tableWidget_PressureRatios, self.tableWidget_Flows, self.tableWidget_FlowRatios, self.tableWidget_Resistances]:
+            for i_row in range(table.rowCount()):
+                dict_key, dict_val = [], None
+                for i_col in range(table.columnCount()):
+                    if i_col != table.columnCount()-1:
+                        dict_key.append(table.item(i_row, i_col).text())
+                    else:
+                        dict_val = table.item(i_row, i_col).text()
+                study_dict["_".join(dict_key)] = dict_val
+        df = pd.DataFrame([study_dict])
+        df.to_csv(self.TxtSdyFile.studypath+".csv")
+
+    def export_all(self):
+        print(f"WARNING: Support for exporting all studies in a folder not implemented")
 
 
 if __name__ == "__main__":

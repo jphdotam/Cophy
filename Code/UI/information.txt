@@ -21,7 +21,7 @@
 <b>Calculation basics</b>
 <br />Each measure is broadly given for four stages of the cardiac cycle:
 <ol>
-<li>Whole cycle</li>
+<li>Whole cycle (WC)</li>
 <li>Systole - period between end-diastole and the diastolic notch</li>
 <li>Diastole - period between end-diastole and the diastolic notch</li>
 <li>Wave-free - 25% of way into diastole up until 5ms before end-diastole</li>

@@ -22,9 +22,12 @@ class TxtFile:
         with open(self.studypath) as f:
             """First find the row with the RWave in it; this is our column headings"""
             lines = f.readlines()
-            self.patient_id = re.search("Patient: ([A-Za-z0-9]*),", lines[0]).group(1)
-            self.study_date = re.search("Study date: ([0-9/]*),", lines[0]).group(1)
-            self.export_date = re.search("Export date: ([0-9/]*)", lines[0]).group(1)
+            self.patient_id = re.search("Patient: ([A-Za-z0-9]*),", lines[0])
+            self.patient_id = self.patient_id.group(1) if self.patient_id else "?"
+            self.study_date = re.search("Study date: ([0-9/]*),", lines[0])
+            self.study_date = self.study_date.group(1) if self.study_date else "?"
+            self.export_date = re.search("Export date: ([0-9/]*)", lines[0])
+            self.export_date = self.export_date.group(1) if self.export_date else "?"
             for i_line, line in enumerate(lines):
                 if "RWave" in line:
                     heading_line = line
