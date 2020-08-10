@@ -26,7 +26,7 @@ if QtCore.QT_VERSION >= 0x50501:
 SAMPLE_FREQ = 200
 PD_OFFSET_TIME = 0.05
 PD_OFFSET_POINT = int(PD_OFFSET_TIME * SAMPLE_FREQ)
-
+PLOT_PEAKS = True
 
 class LabelledLinearRegionItem(pg.LinearRegionItem):
     def __init__(self, values, movable, label):
@@ -135,15 +135,6 @@ class LabelUI(Ui_MainWindow):
         self.load_saved_labels()
         self.perform_calculations()
 
-    @staticmethod
-    def clip_wave(wave, quantile=0.90, n_quantiles=1.5, ref_wave=None):
-        if ref_wave is None:
-            ref_wave = wave
-        quantile = np.nanquantile(ref_wave, quantile)
-        median = np.nanmedian(ref_wave)
-        wave[wave > median + (n_quantiles * quantile)] = np.nan
-        return wave
-
     def plot_txtsdyFile(self):
         pg.setConfigOptions(antialias=True)
 
@@ -154,16 +145,19 @@ class LabelUI(Ui_MainWindow):
         self.graphicsView_.show()
 
         # Data
-        data_pa = self.clip_wave(np.array(self.TxtSdyFile.df['pa'], dtype=np.float))
-        data_pd = self.clip_wave(np.array(self.TxtSdyFile.df['pd'], dtype=np.float),
-                                 ref_wave=np.array(self.TxtSdyFile.df['pa'], dtype=np.float))
+        # data_pa = self.clip_wave(np.array(self.TxtSdyFile.df['pa'], dtype=np.float))
+        # data_pd = self.clip_wave(np.array(self.TxtSdyFile.df['pd'], dtype=np.float),
+        #                          ref_wave=np.array(self.TxtSdyFile.df['pa'], dtype=np.float))
+        data_pa = np.array(self.TxtSdyFile.df['pa'])
+        data_pd = np.array(self.TxtSdyFile.df['pd'])
         data_time = np.array(self.TxtSdyFile.df['time'])
         data_flow = np.array(self.TxtSdyFile.df['flow'])
-        data_pdpa = plots.pdpa(self)
-        data_pdpa_filtered = plots.pdpa_filtered(self)
-        data_microvascular_resistance = plots.microvascular_resistance(self)
+        data_pdpa = plots.pdpa(self, peaks=self.TxtSdyFile.peaks)
+
+        data_pdpa_filtered = plots.pdpa_filtered(self, pdpa=data_pdpa)
+        data_microvascular_resistance = plots.microvascular_resistance(self, peaks=self.TxtSdyFile.peaks)
         data_microvascular_resistance_filtered = plots.filtered_resistance(data_microvascular_resistance)
-        data_stenosis_resistance = plots.stenosis_resistance(self)
+        data_stenosis_resistance = plots.stenosis_resistance(self, peaks=self.TxtSdyFile.peaks)
         data_stenosis_resistance_filtered = plots.filtered_resistance(data_stenosis_resistance)
 
         # Plots
@@ -203,6 +197,14 @@ class LabelUI(Ui_MainWindow):
                                    y=data_stenosis_resistance_filtered['y'],
                                    name='Stenosis (filtered)',
                                    pen=(255, 0, 255, 200))
+
+        # ECG gating indicators
+        if PLOT_PEAKS:
+            peak_times = np.array([data_time[peak] for peak in self.TxtSdyFile.peaks])
+            self.plot_pressure.plot(x=peak_times, y=np.repeat(max(data_pd), len(self.TxtSdyFile.peaks)),
+                                    pen=(200, 200, 200),
+                                    symbolBrush=(255, 0, 0),
+                                    symbolPen='w')
 
     def click_button(self, btn):
         if btn.slider_active:
